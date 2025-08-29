@@ -1,0 +1,492 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#623CEA", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "Storm Events Database AIU Storage Pattern", "shape": "square", "title": "Type: Archival Information Unit,Identity Storage Pattern"}, {"color": "#009933", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.998c17e2-56f9-4faa-b150-4c98b8acb59b", "label": "License", "shape": "star", "title": "Type: Access Rights"}, {"color": "#EF233C", "id": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "License Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "string", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nstring"}, {"color": "#623CEA", "id": "License Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nLicense Value"}, {"color": "#623CEA", "id": "http://www.w3.org/2001/XMLSchema#", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nhttp://www.w3.org/2001/XMLSchema#"}, {"color": "#623CEA", "id": "", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\n"}, {"color": "#623CEA", "id": "True", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nTrue"}, {"color": "#ff66cc", "id": "998c17e2-56f9-4faa-b150-4c98b8acb59b.6b81deb7-8932-4e32-a0a4-08f5cfb769cd", "label": "License structure", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "License structure Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "License structure Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nLicense structure Value"}, {"color": "#ff66cc", "id": "998c17e2-56f9-4faa-b150-4c98b8acb59b.3c16aeee-eb1e-4b36-bfef-5a851b488ae7", "label": "License semantic", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "License semantic Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "License semantic Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nLicense semantic Value"}, {"color": "#EF233C", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.bd79358f-ea62-41cc-b8d6-8e931e33e720", "label": "Provider", "shape": "elipse", "title": "Type: Context"}, {"color": "#EF233C", "id": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "Provider Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Provider Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nProvider Value"}, {"color": "#ff66cc", "id": "bd79358f-ea62-41cc-b8d6-8e931e33e720.f6e8e1dc-6013-4f2d-bfa7-91bd5db97070", "label": "context structure", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "context structure Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "context structure Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\ncontext structure Value"}, {"color": "#ff66cc", "id": "bd79358f-ea62-41cc-b8d6-8e931e33e720.7b07bf39-54ad-44a9-baa4-59b015315a14", "label": "context semantic", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "context semantic Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "context semantic Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\ncontext semantic Value"}, {"color": "#EF233C", "id": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "Packaging Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Packaging Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nPackaging Value"}, {"color": "#EF233C", "id": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "Storm Events Database Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Storm Events Database Description Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nStorm Events Database Description Value"}, {"color": "#EF233C", "id": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "File Link", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "anyURI", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nanyURI"}, {"color": "#623CEA", "id": "File Link", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nFile Link"}, {"color": "#EF233C", "id": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nValue"}, {"color": "#EF233C", "id": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nhttps://www.ncei.noaa.gov/pub/data/swdi/stormevents/"}, {"color": "#EF233C", "id": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nhttps://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/"}, {"color": "#9966ff", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.9276af85-caa6-4dda-90f4-87b7fb1b125c", "label": "File", "shape": "hexagon", "title": "Type: Content"}, {"color": "#ff66cc", "id": "9276af85-caa6-4dda-90f4-87b7fb1b125c.1c8310a1-9bfd-4a2c-bf19-d597ff41388f", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Format Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nFormat Value"}, {"color": "#ff66cc", "id": "9276af85-caa6-4dda-90f4-87b7fb1b125c.3d5da38a-3673-4c6d-9555-9ce668097aa1", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Description Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nDescription Value"}, {"color": "#EF233C", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.e6c4dd19-a47b-4e4e-91df-5daf86116448", "label": "Website Reference", "shape": "elipse", "title": "Type: Reference"}, {"color": "#ff66cc", "id": "e6c4dd19-a47b-4e4e-91df-5daf86116448.a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "e6c4dd19-a47b-4e4e-91df-5daf86116448.7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.90494e63-8a53-4551-be70-b3e62b06f652", "label": "Data Reference", "shape": "elipse", "title": "Type: Reference"}, {"color": "#ff66cc", "id": "90494e63-8a53-4551-be70-b3e62b06f652.3b4409bd-44c9-48df-80c2-eaf0a32f85ba", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "90494e63-8a53-4551-be70-b3e62b06f652.ac8c44a9-298b-4897-9cf1-d232560a75ea", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff9900", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.35dd028d-d1f0-49b6-b7c7-3a907447bcd8", "label": "Packaging", "shape": "triangleDown", "title": "Type: Packaging"}, {"color": "#ff66cc", "id": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.e00354ef-6ccf-4d83-b816-77a7c4943f3d", "label": "packing structure", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "packing structure Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "packing structure Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\npacking structure Value"}, {"color": "#ff66cc", "id": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.23a696aa-4c9a-46f6-9039-4ade98d63f53", "label": "packing semantic", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "packing semantic Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "packing semantic Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\npacking semantic Value"}, {"color": "#623CEA", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8c2eb060-ecc6-48cf-8b16-b15e5e06bce1", "label": "Storm Events Database Description", "shape": "square", "title": "Type: Unit Description"}, {"color": "#ff66cc", "id": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.f59228dd-73be-4f5b-9a9e-378018494d1e", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.d80ac8ca-1814-420c-bf9e-d54815947608", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#61F2C2", "id": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8eeb2c5f-a78b-4d56-91f2-e011673b4511", "label": "Checksum", "shape": "diamond", "title": "Type: Fixity"}, {"color": "#ff66cc", "id": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d7bf98b4-8d74-4acf-8c6a-25d25128d6f2", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d03670cb-3590-4f32-90b0-4b661d459ed9", "label": "Definition", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "Definition Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Definition Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nDefinition Value"}]);
+                  edges = new vis.DataSet([{"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasAccessRights", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.998c17e2-56f9-4faa-b150-4c98b8acb59b"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.998c17e2-56f9-4faa-b150-4c98b8acb59b", "label": "hasData", "to": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "hasClass", "to": "string"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "hasLabel", "to": "License Value"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "hasValue", "to": ""}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.998c17e2-56f9-4faa-b150-4c98b8acb59b", "label": "hasStructure", "to": "998c17e2-56f9-4faa-b150-4c98b8acb59b.6b81deb7-8932-4e32-a0a4-08f5cfb769cd"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.6b81deb7-8932-4e32-a0a4-08f5cfb769cd", "label": "hasData", "to": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50"}, {"from": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "hasClass", "to": "string"}, {"from": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "hasLabel", "to": "License structure Value"}, {"from": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "hasValue", "to": ""}, {"from": "6b81deb7-8932-4e32-a0a4-08f5cfb769cd.703b4ab2-0109-47aa-b6cf-9a8f10d83b50", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.998c17e2-56f9-4faa-b150-4c98b8acb59b", "label": "hasSemantics", "to": "998c17e2-56f9-4faa-b150-4c98b8acb59b.3c16aeee-eb1e-4b36-bfef-5a851b488ae7"}, {"from": "998c17e2-56f9-4faa-b150-4c98b8acb59b.3c16aeee-eb1e-4b36-bfef-5a851b488ae7", "label": "hasData", "to": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be"}, {"from": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "hasClass", "to": "string"}, {"from": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "hasLabel", "to": "License semantic Value"}, {"from": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "hasValue", "to": ""}, {"from": "3c16aeee-eb1e-4b36-bfef-5a851b488ae7.ddd32205-e5e2-4766-a9cc-063d5c7115be", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasContext", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.bd79358f-ea62-41cc-b8d6-8e931e33e720"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.bd79358f-ea62-41cc-b8d6-8e931e33e720", "label": "hasData", "to": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "hasClass", "to": "string"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "hasLabel", "to": "Provider Value"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "hasValue", "to": ""}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.bd79358f-ea62-41cc-b8d6-8e931e33e720", "label": "hasStructure", "to": "bd79358f-ea62-41cc-b8d6-8e931e33e720.f6e8e1dc-6013-4f2d-bfa7-91bd5db97070"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.f6e8e1dc-6013-4f2d-bfa7-91bd5db97070", "label": "hasData", "to": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234"}, {"from": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "hasClass", "to": "string"}, {"from": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "hasLabel", "to": "context structure Value"}, {"from": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "hasValue", "to": ""}, {"from": "f6e8e1dc-6013-4f2d-bfa7-91bd5db97070.6b842719-7579-4b7b-89a6-e29b75b16234", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.bd79358f-ea62-41cc-b8d6-8e931e33e720", "label": "hasSemantics", "to": "bd79358f-ea62-41cc-b8d6-8e931e33e720.7b07bf39-54ad-44a9-baa4-59b015315a14"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.7b07bf39-54ad-44a9-baa4-59b015315a14", "label": "hasData", "to": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576"}, {"from": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "hasClass", "to": "string"}, {"from": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "hasLabel", "to": "context semantic Value"}, {"from": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "hasValue", "to": ""}, {"from": "7b07bf39-54ad-44a9-baa4-59b015315a14.71343678-f700-440b-9af3-49f9b7fb4576", "label": "isRequired", "to": "True"}, {"from": "bd79358f-ea62-41cc-b8d6-8e931e33e720.7b07bf39-54ad-44a9-baa4-59b015315a14", "label": "addsMeaningTo", "to": "bd79358f-ea62-41cc-b8d6-8e931e33e720.f6e8e1dc-6013-4f2d-bfa7-91bd5db97070"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "hasClass", "to": "string"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "hasLabel", "to": "Packaging Value"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "hasValue", "to": ""}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "hasClass", "to": "string"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "hasLabel", "to": "Storm Events Database Description Value"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "hasValue", "to": ""}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "hasClass", "to": "anyURI"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "hasLabel", "to": "File Link"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "hasValue", "to": ""}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "hasClass", "to": "string"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "hasLabel", "to": "Value"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "hasValue", "to": ""}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "hasClass", "to": "anyURI"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "hasLabel", "to": "Value"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "hasValue", "to": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "hasClass", "to": "anyURI"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "hasLabel", "to": "Value"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "hasValue", "to": "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "998c17e2-56f9-4faa-b150-4c98b8acb59b.c6a3aa58-d6d8-4941-8578-0d189a079dfc"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasLiteralField", "to": "bd79358f-ea62-41cc-b8d6-8e931e33e720.a88d6aaa-8a28-4aa6-9394-a6cee6187f06"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasContent", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.9276af85-caa6-4dda-90f4-87b7fb1b125c"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.9276af85-caa6-4dda-90f4-87b7fb1b125c", "label": "hasData", "to": "9276af85-caa6-4dda-90f4-87b7fb1b125c.26fdfa40-1651-472a-a786-94e6aa1bbc84"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.9276af85-caa6-4dda-90f4-87b7fb1b125c", "label": "hasStructure", "to": "9276af85-caa6-4dda-90f4-87b7fb1b125c.1c8310a1-9bfd-4a2c-bf19-d597ff41388f"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.1c8310a1-9bfd-4a2c-bf19-d597ff41388f", "label": "hasData", "to": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5"}, {"from": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "hasClass", "to": "string"}, {"from": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "hasLabel", "to": "Format Value"}, {"from": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "hasValue", "to": ""}, {"from": "1c8310a1-9bfd-4a2c-bf19-d597ff41388f.8145f12b-b010-4b38-8013-72208efb6fa5", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.9276af85-caa6-4dda-90f4-87b7fb1b125c", "label": "hasSemantics", "to": "9276af85-caa6-4dda-90f4-87b7fb1b125c.3d5da38a-3673-4c6d-9555-9ce668097aa1"}, {"from": "9276af85-caa6-4dda-90f4-87b7fb1b125c.3d5da38a-3673-4c6d-9555-9ce668097aa1", "label": "hasData", "to": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc"}, {"from": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "hasClass", "to": "string"}, {"from": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "hasLabel", "to": "Description Value"}, {"from": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "hasValue", "to": ""}, {"from": "3d5da38a-3673-4c6d-9555-9ce668097aa1.d78377a3-a23e-4145-928b-ce02b82f87fc", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasReference", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.e6c4dd19-a47b-4e4e-91df-5daf86116448"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.e6c4dd19-a47b-4e4e-91df-5daf86116448", "label": "hasData", "to": "e6c4dd19-a47b-4e4e-91df-5daf86116448.ec315b17-bf7f-4a4b-893b-d0e8f726871c"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.e6c4dd19-a47b-4e4e-91df-5daf86116448", "label": "hasStructure", "to": "e6c4dd19-a47b-4e4e-91df-5daf86116448.a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1", "label": "hasData", "to": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435"}, {"from": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "hasClass", "to": "string"}, {"from": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "hasLabel", "to": "Format Value"}, {"from": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "hasValue", "to": ""}, {"from": "a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1.8765c24b-e941-46e6-b2d4-6b23a3328435", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.e6c4dd19-a47b-4e4e-91df-5daf86116448", "label": "hasSemantics", "to": "e6c4dd19-a47b-4e4e-91df-5daf86116448.7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165", "label": "hasData", "to": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be"}, {"from": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "hasClass", "to": "string"}, {"from": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "hasLabel", "to": "Description Value"}, {"from": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "hasValue", "to": ""}, {"from": "7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165.a31f7d22-1e27-473d-acc1-a33e8d6a01be", "label": "isRequired", "to": "True"}, {"from": "e6c4dd19-a47b-4e4e-91df-5daf86116448.7bc55cad-d9e3-4ab7-9a13-4bd6d3c6d165", "label": "addsMeaningTo", "to": "e6c4dd19-a47b-4e4e-91df-5daf86116448.a5ebd7b9-d83a-4e0d-a43c-84b1ae8d01c1"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasReference", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.90494e63-8a53-4551-be70-b3e62b06f652"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.90494e63-8a53-4551-be70-b3e62b06f652", "label": "hasData", "to": "90494e63-8a53-4551-be70-b3e62b06f652.20e9581b-84f0-4e8a-84bf-3bb5515e980c"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.90494e63-8a53-4551-be70-b3e62b06f652", "label": "hasStructure", "to": "90494e63-8a53-4551-be70-b3e62b06f652.3b4409bd-44c9-48df-80c2-eaf0a32f85ba"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.3b4409bd-44c9-48df-80c2-eaf0a32f85ba", "label": "hasData", "to": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf"}, {"from": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "hasClass", "to": "string"}, {"from": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "hasLabel", "to": "Format Value"}, {"from": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "hasValue", "to": ""}, {"from": "3b4409bd-44c9-48df-80c2-eaf0a32f85ba.217ace0c-a933-480b-bf8f-eba6d168bbaf", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.90494e63-8a53-4551-be70-b3e62b06f652", "label": "hasSemantics", "to": "90494e63-8a53-4551-be70-b3e62b06f652.ac8c44a9-298b-4897-9cf1-d232560a75ea"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.ac8c44a9-298b-4897-9cf1-d232560a75ea", "label": "hasData", "to": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f"}, {"from": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "hasClass", "to": "string"}, {"from": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "hasLabel", "to": "Description Value"}, {"from": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "hasValue", "to": ""}, {"from": "ac8c44a9-298b-4897-9cf1-d232560a75ea.30c3ce73-8da4-4f3b-9596-ffcba0b0506f", "label": "isRequired", "to": "True"}, {"from": "90494e63-8a53-4551-be70-b3e62b06f652.ac8c44a9-298b-4897-9cf1-d232560a75ea", "label": "addsMeaningTo", "to": "90494e63-8a53-4551-be70-b3e62b06f652.3b4409bd-44c9-48df-80c2-eaf0a32f85ba"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "packagedAs", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.35dd028d-d1f0-49b6-b7c7-3a907447bcd8"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.35dd028d-d1f0-49b6-b7c7-3a907447bcd8", "label": "hasData", "to": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.7738c9c0-fbec-475a-98d2-0b3f79d94d6b"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.35dd028d-d1f0-49b6-b7c7-3a907447bcd8", "label": "hasStructure", "to": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.e00354ef-6ccf-4d83-b816-77a7c4943f3d"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.e00354ef-6ccf-4d83-b816-77a7c4943f3d", "label": "hasData", "to": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493"}, {"from": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "hasClass", "to": "string"}, {"from": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "hasLabel", "to": "packing structure Value"}, {"from": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "hasValue", "to": ""}, {"from": "e00354ef-6ccf-4d83-b816-77a7c4943f3d.d2d1486b-d57d-471f-a303-c897256bd493", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.35dd028d-d1f0-49b6-b7c7-3a907447bcd8", "label": "hasSemantics", "to": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.23a696aa-4c9a-46f6-9039-4ade98d63f53"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.23a696aa-4c9a-46f6-9039-4ade98d63f53", "label": "hasData", "to": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a"}, {"from": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "hasClass", "to": "string"}, {"from": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "hasLabel", "to": "packing semantic Value"}, {"from": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "hasValue", "to": ""}, {"from": "23a696aa-4c9a-46f6-9039-4ade98d63f53.3a4d64a0-66fc-4830-beed-1dd24906da8a", "label": "isRequired", "to": "True"}, {"from": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.23a696aa-4c9a-46f6-9039-4ade98d63f53", "label": "addsMeaningTo", "to": "35dd028d-d1f0-49b6-b7c7-3a907447bcd8.e00354ef-6ccf-4d83-b816-77a7c4943f3d"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "describedBy", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8c2eb060-ecc6-48cf-8b16-b15e5e06bce1"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8c2eb060-ecc6-48cf-8b16-b15e5e06bce1", "label": "hasData", "to": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.1daa65c6-47d3-4b33-9c00-35c5b1460a24"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8c2eb060-ecc6-48cf-8b16-b15e5e06bce1", "label": "hasStructure", "to": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.f59228dd-73be-4f5b-9a9e-378018494d1e"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.f59228dd-73be-4f5b-9a9e-378018494d1e", "label": "hasData", "to": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c"}, {"from": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "hasClass", "to": "string"}, {"from": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "hasLabel", "to": "Format Value"}, {"from": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "hasValue", "to": ""}, {"from": "f59228dd-73be-4f5b-9a9e-378018494d1e.cd39b868-cde8-4517-be2b-3ccb60b74b9c", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8c2eb060-ecc6-48cf-8b16-b15e5e06bce1", "label": "hasSemantics", "to": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.d80ac8ca-1814-420c-bf9e-d54815947608"}, {"from": "8c2eb060-ecc6-48cf-8b16-b15e5e06bce1.d80ac8ca-1814-420c-bf9e-d54815947608", "label": "hasData", "to": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e"}, {"from": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "hasClass", "to": "string"}, {"from": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "hasLabel", "to": "Description Value"}, {"from": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "hasValue", "to": ""}, {"from": "d80ac8ca-1814-420c-bf9e-d54815947608.6b7f9cab-6e38-4e7b-a336-65d967f6d05e", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119", "label": "hasFixity", "to": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8eeb2c5f-a78b-4d56-91f2-e011673b4511"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8eeb2c5f-a78b-4d56-91f2-e011673b4511", "label": "hasData", "to": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.f02e3d79-3bfe-4dd7-82ca-9b2f8e40669b"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8eeb2c5f-a78b-4d56-91f2-e011673b4511", "label": "hasStructure", "to": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d7bf98b4-8d74-4acf-8c6a-25d25128d6f2"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d7bf98b4-8d74-4acf-8c6a-25d25128d6f2", "label": "hasData", "to": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13"}, {"from": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "hasClass", "to": "string"}, {"from": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "hasLabel", "to": "Format Value"}, {"from": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "hasValue", "to": ""}, {"from": "d7bf98b4-8d74-4acf-8c6a-25d25128d6f2.19f1b2e9-f544-4683-b545-1cced3541e13", "label": "isRequired", "to": "True"}, {"from": "0c4c995b-d7c4-4bc3-a7fe-3557e8d6b119.8eeb2c5f-a78b-4d56-91f2-e011673b4511", "label": "hasSemantics", "to": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d03670cb-3590-4f32-90b0-4b661d459ed9"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d03670cb-3590-4f32-90b0-4b661d459ed9", "label": "hasData", "to": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c"}, {"from": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "hasClass", "to": "string"}, {"from": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "hasLabel", "to": "Definition Value"}, {"from": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "hasValue", "to": ""}, {"from": "d03670cb-3590-4f32-90b0-4b661d459ed9.635e6948-45d9-4841-aa42-a355eea9aa8c", "label": "isRequired", "to": "True"}, {"from": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d03670cb-3590-4f32-90b0-4b661d459ed9", "label": "addsMeaningTo", "to": "8eeb2c5f-a78b-4d56-91f2-e011673b4511.d7bf98b4-8d74-4acf-8c6a-25d25128d6f2"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"configure": {"enabled": true, "showButton": true, "filter": ["physics", "layout"]}, "layout": {"hierarchical": {"enabled": true, "direction": "UD", "sortMethod": "directed"}}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

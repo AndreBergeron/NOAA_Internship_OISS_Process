@@ -1,0 +1,587 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 600px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#009933", "id": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "OISS UBL", "shape": "star", "title": "Type: Archival Information Unit,UBL Template\nAlternate Labels:\nbootstrappedsystem resource"}, {"color": "#009933", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.c235c334-8c4f-46ec-ad58-b057e415c3ee", "label": "Access Rights", "shape": "star", "title": "Type: Access Rights"}, {"color": "#EF233C", "id": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "Access Rights Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "string", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nstring"}, {"color": "#623CEA", "id": "Access Rights Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nAccess Rights Value"}, {"color": "#623CEA", "id": "http://www.w3.org/2001/XMLSchema#", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nhttp://www.w3.org/2001/XMLSchema#"}, {"color": "#623CEA", "id": "", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\n"}, {"color": "#623CEA", "id": "True", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nTrue"}, {"color": "#ff66cc", "id": "c235c334-8c4f-46ec-ad58-b057e415c3ee.043a94d4-5118-42f0-8c0b-da232a0fdb73", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Format Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nFormat Value"}, {"color": "#ff66cc", "id": "c235c334-8c4f-46ec-ad58-b057e415c3ee.468f4fb3-7196-4e47-969f-487c56204621", "label": "Meaning", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "Meaning Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Meaning Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nMeaning Value"}, {"color": "#EF233C", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.3920179f-bce4-4e89-9cf0-50c8de1890a2", "label": "Provenance", "shape": "elipse", "title": "Type: Provenance"}, {"color": "#EF233C", "id": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "Provenance Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Provenance Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nProvenance Value"}, {"color": "#ff66cc", "id": "3920179f-bce4-4e89-9cf0-50c8de1890a2.b19eebde-3585-4f75-a39a-5b7ab2c49701", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "3920179f-bce4-4e89-9cf0-50c8de1890a2.4c500284-00f1-4373-a6d2-32b1b8cc1f6b", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Description Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nDescription Value"}, {"color": "#EF233C", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.bfe290ed-ac9c-419a-a3ff-162817e13762", "label": "Context", "shape": "elipse", "title": "Type: Context"}, {"color": "#EF233C", "id": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "Context Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Context Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nContext Value"}, {"color": "#ff66cc", "id": "bfe290ed-ac9c-419a-a3ff-162817e13762.5551c85c-3d6a-4893-b5dd-2a5c466e1821", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "bfe290ed-ac9c-419a-a3ff-162817e13762.ed08781a-e77f-4f27-bdb0-e2adab6e05d4", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "Content Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Content Format Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nContent Format Value"}, {"color": "#EF233C", "id": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "Content Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Content Description Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nContent Description Value"}, {"color": "#EF233C", "id": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "{{placeholder1}}", "shape": "elipse", "title": "Type: Digital Object,Literal Field\nAlternate Labels:\noutput field"}, {"color": "#623CEA", "id": "{{placeholder1}}", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\n{{placeholder1}}"}, {"color": "#EF233C", "id": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "{{placeholder2}}", "shape": "elipse", "title": "Type: Digital Object,Literal Field\nAlternate Labels:\ninput field"}, {"color": "#623CEA", "id": "{{placeholder2}}", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\n{{placeholder2}}"}, {"color": "#EF233C", "id": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nValue"}, {"color": "#623CEA", "id": "arn:aws:lambda:us-east-1:188772587448:function:sed-test-lambda2", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\narn:aws:lambda:us-east-1:188772587448:function:sed-test-lambda2"}, {"color": "#EF233C", "id": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "Meaning Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "Fixity Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Fixity Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nFixity Value"}, {"color": "#EF233C", "id": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "Reference Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "Reference Value", "label": "Value", "shape": "square", "title": "Type: Digital Object\nAlternate Labels:\nReference Value"}, {"color": "#9966ff", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260", "label": "Runtime Fields", "shape": "hexagon", "title": "Type: Content"}, {"color": "#ff66cc", "id": "7d316c14-b10a-4a51-9363-5c9664f0b260.4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01", "label": "Content Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#ff66cc", "id": "7d316c14-b10a-4a51-9363-5c9664f0b260.517a09d1-0976-4390-9ae2-47c495eb3dfd", "label": "Content Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.6bf6b058-43d9-49b8-bfc7-efcb603661ed", "label": "Reference", "shape": "elipse", "title": "Type: Reference"}, {"color": "#ff66cc", "id": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.03187968-ddc0-40fd-8233-bcc7b43acb00", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#ff66cc", "id": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.fbb53ede-49f1-47cb-b931-bed849eb6562", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#ff9900", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.b93dcd8f-d6da-489a-8cfe-329631832ccf", "label": "Resource Identifier", "shape": "triangleDown", "title": "Type: Packaging"}, {"color": "#ff66cc", "id": "b93dcd8f-d6da-489a-8cfe-329631832ccf.1e156d2f-a0da-4195-954d-ce2ab15996ad", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#ff66cc", "id": "b93dcd8f-d6da-489a-8cfe-329631832ccf.30e4eb1a-1d77-4329-a4e4-0fe5c7f14105", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#623CEA", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.f34bc184-08e5-43d3-a159-8c7c4528c412", "label": "Description", "shape": "square", "title": "Type: Unit Description"}, {"color": "#ff66cc", "id": "f34bc184-08e5-43d3-a159-8c7c4528c412.d4727dc4-d81f-49e4-ba5d-58d516758076", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#ff66cc", "id": "f34bc184-08e5-43d3-a159-8c7c4528c412.4304396b-5dda-4d34-a567-8ca2d3fefc47", "label": "Meaning", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#ff66cc", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "OISS UBL", "shape": "star", "title": "Type: Archival Information Unit,UBL Pattern\nAlternate Labels:\nbootstrappedsystem resource"}, {"color": "#009933", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.5e5e7b3f-e868-4b14-8a94-dde50c7701ec", "label": "Access Rights", "shape": "star", "title": "Type: Access Rights"}, {"color": "#EF233C", "id": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "Access Rights Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.80f10448-4eff-4a48-bc8e-4b5738605a38", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.293e7ab0-e194-42a3-a7e7-14784251c465", "label": "Meaning", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "Meaning Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4bd6fc29-02f5-41ee-bbf4-140fde173c4c", "label": "Provenance", "shape": "elipse", "title": "Type: Provenance"}, {"color": "#EF233C", "id": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "Provenance Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.4c258ab2-8bab-42ec-aa53-caa807d6f6dc", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.8886463c-291c-43cf-bfe3-77c71ddc9846", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2f089409-1f54-40db-878f-c3df702c0461", "label": "Context", "shape": "elipse", "title": "Type: Context"}, {"color": "#EF233C", "id": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "Context Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "2f089409-1f54-40db-878f-c3df702c0461.95db38cd-0cf4-4598-8d14-8d92ecc55248", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "2f089409-1f54-40db-878f-c3df702c0461.6e249723-3c3c-4edb-8c2b-a6601a5d9dc2", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "Fixity Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "Reference Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#9966ff", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a", "label": "Runtime Fields", "shape": "hexagon", "title": "Type: Content"}, {"color": "#EF233C", "id": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "{{placeholder1}}", "shape": "elipse", "title": "Type: Digital Object,Literal Field\nAlternate Labels:\noutput field"}, {"color": "#EF233C", "id": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "{{placeholder2}}", "shape": "elipse", "title": "Type: Digital Object,Literal Field\nAlternate Labels:\ninput field"}, {"color": "#ff66cc", "id": "68fc659a-27e8-4e71-9733-65bfe024c95a.459eb1ae-90e3-45fa-96e7-136913cc69a1", "label": "Content Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "Content Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "68fc659a-27e8-4e71-9733-65bfe024c95a.5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6", "label": "Content Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "Content Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#EF233C", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4e91265f-c1d8-4a88-8b8c-6f4770f7383c", "label": "Reference", "shape": "elipse", "title": "Type: Reference"}, {"color": "#ff66cc", "id": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.10a21d4f-1870-4f68-bfde-dc5dadacc783", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.fceacf30-8f32-47a9-a1c9-87b8bcd85097", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff9900", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2a932da9-851f-4e33-8958-e51d11f36f63", "label": "Resource Identifier", "shape": "triangleDown", "title": "Type: Packaging"}, {"color": "#ff66cc", "id": "2a932da9-851f-4e33-8958-e51d11f36f63.3454d5ad-f439-4c3a-a9bb-70cb18d369e4", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "2a932da9-851f-4e33-8958-e51d11f36f63.beb4d4f0-6469-4871-b72c-489eb0d98770", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#623CEA", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.7703dc65-b383-4a8a-ac7c-6776e3d9509e", "label": "Description", "shape": "square", "title": "Type: Unit Description"}, {"color": "#ff66cc", "id": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.13868dd3-f0c4-4c7b-8b76-bc96777b94aa", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.4c54b533-c36d-4ffa-b346-7d8f701e4185", "label": "Meaning", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "Meaning Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#61F2C2", "id": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf", "label": "Fixity", "shape": "diamond", "title": "Type: Fixity"}, {"color": "#ff66cc", "id": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.aaf1384f-2375-4140-bbe1-70b5fbddeed4", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#EF233C", "id": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "Format Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#ff66cc", "id": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.28a825cf-47c3-480a-9dff-dc667c61d24c", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}, {"color": "#EF233C", "id": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "Description Value", "shape": "elipse", "title": "Type: Digital Object,Literal Field"}, {"color": "#61F2C2", "id": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.d4054d3c-4047-4d5e-a571-cd030f580c72", "label": "Fixity", "shape": "diamond", "title": "Type: Fixity"}, {"color": "#ff66cc", "id": "d4054d3c-4047-4d5e-a571-cd030f580c72.0e3b393e-b271-4b74-a51c-1f348ac8fccc", "label": "Format", "shape": "star", "title": "Type: Structure Representation"}, {"color": "#ff66cc", "id": "d4054d3c-4047-4d5e-a571-cd030f580c72.b2180bdd-53d6-482c-a275-fc3ff19ddb99", "label": "Description", "shape": "star", "title": "Type: Semantic Representation"}]);
+                  edges = new vis.DataSet([{"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasAccessRights", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.c235c334-8c4f-46ec-ad58-b057e415c3ee"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.c235c334-8c4f-46ec-ad58-b057e415c3ee", "label": "hasData", "to": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "hasClass", "to": "string"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "hasLabel", "to": "Access Rights Value"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "hasValue", "to": ""}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.c235c334-8c4f-46ec-ad58-b057e415c3ee", "label": "hasStructure", "to": "c235c334-8c4f-46ec-ad58-b057e415c3ee.043a94d4-5118-42f0-8c0b-da232a0fdb73"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.043a94d4-5118-42f0-8c0b-da232a0fdb73", "label": "hasData", "to": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9"}, {"from": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "hasClass", "to": "string"}, {"from": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "hasLabel", "to": "Format Value"}, {"from": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "hasValue", "to": ""}, {"from": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.c235c334-8c4f-46ec-ad58-b057e415c3ee", "label": "hasSemantics", "to": "c235c334-8c4f-46ec-ad58-b057e415c3ee.468f4fb3-7196-4e47-969f-487c56204621"}, {"from": "c235c334-8c4f-46ec-ad58-b057e415c3ee.468f4fb3-7196-4e47-969f-487c56204621", "label": "hasData", "to": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63"}, {"from": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "hasClass", "to": "string"}, {"from": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "hasLabel", "to": "Meaning Value"}, {"from": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "hasValue", "to": ""}, {"from": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasProvenance", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.3920179f-bce4-4e89-9cf0-50c8de1890a2"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.3920179f-bce4-4e89-9cf0-50c8de1890a2", "label": "hasData", "to": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "hasClass", "to": "string"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "hasLabel", "to": "Provenance Value"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "hasValue", "to": ""}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.3920179f-bce4-4e89-9cf0-50c8de1890a2", "label": "hasStructure", "to": "3920179f-bce4-4e89-9cf0-50c8de1890a2.b19eebde-3585-4f75-a39a-5b7ab2c49701"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.b19eebde-3585-4f75-a39a-5b7ab2c49701", "label": "hasData", "to": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c"}, {"from": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "hasClass", "to": "string"}, {"from": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "hasLabel", "to": "Format Value"}, {"from": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "hasValue", "to": ""}, {"from": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.3920179f-bce4-4e89-9cf0-50c8de1890a2", "label": "hasSemantics", "to": "3920179f-bce4-4e89-9cf0-50c8de1890a2.4c500284-00f1-4373-a6d2-32b1b8cc1f6b"}, {"from": "3920179f-bce4-4e89-9cf0-50c8de1890a2.4c500284-00f1-4373-a6d2-32b1b8cc1f6b", "label": "hasData", "to": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0"}, {"from": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "hasClass", "to": "string"}, {"from": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "hasLabel", "to": "Description Value"}, {"from": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "hasValue", "to": ""}, {"from": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasContext", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.bfe290ed-ac9c-419a-a3ff-162817e13762"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.bfe290ed-ac9c-419a-a3ff-162817e13762", "label": "hasData", "to": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "hasClass", "to": "string"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "hasLabel", "to": "Context Value"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "hasValue", "to": ""}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.bfe290ed-ac9c-419a-a3ff-162817e13762", "label": "hasStructure", "to": "bfe290ed-ac9c-419a-a3ff-162817e13762.5551c85c-3d6a-4893-b5dd-2a5c466e1821"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.5551c85c-3d6a-4893-b5dd-2a5c466e1821", "label": "hasData", "to": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949"}, {"from": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "hasClass", "to": "string"}, {"from": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "hasLabel", "to": "Format Value"}, {"from": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "hasValue", "to": ""}, {"from": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949", "label": "isRequired", "to": "True"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.bfe290ed-ac9c-419a-a3ff-162817e13762", "label": "hasSemantics", "to": "bfe290ed-ac9c-419a-a3ff-162817e13762.ed08781a-e77f-4f27-bdb0-e2adab6e05d4"}, {"from": "bfe290ed-ac9c-419a-a3ff-162817e13762.ed08781a-e77f-4f27-bdb0-e2adab6e05d4", "label": "hasData", "to": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b"}, {"from": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "hasClass", "to": "string"}, {"from": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "hasLabel", "to": "Description Value"}, {"from": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "hasValue", "to": ""}, {"from": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22"}, {"from": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "hasClass", "to": "string"}, {"from": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "hasLabel", "to": "Content Format Value"}, {"from": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "hasValue", "to": ""}, {"from": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561"}, {"from": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "hasClass", "to": "string"}, {"from": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "hasLabel", "to": "Content Description Value"}, {"from": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "hasValue", "to": ""}, {"from": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "hasClass", "to": "string"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "hasLabel", "to": "{{placeholder1}}"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "hasValue", "to": ""}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "hasClass", "to": "string"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "hasLabel", "to": "{{placeholder2}}"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "hasValue", "to": ""}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4"}, {"from": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "hasClass", "to": "string"}, {"from": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "hasLabel", "to": "Format Value"}, {"from": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "hasValue", "to": ""}, {"from": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5"}, {"from": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "hasClass", "to": "string"}, {"from": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "hasLabel", "to": "Description Value"}, {"from": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "hasValue", "to": ""}, {"from": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "hasClass", "to": "string"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "hasLabel", "to": "Value"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "hasValue", "to": "arn:aws:lambda:us-east-1:188772587448:function:sed-test-lambda2"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b"}, {"from": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "hasClass", "to": "string"}, {"from": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "hasLabel", "to": "Format Value"}, {"from": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "hasValue", "to": ""}, {"from": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053"}, {"from": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "hasClass", "to": "string"}, {"from": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "hasLabel", "to": "Meaning Value"}, {"from": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "hasValue", "to": ""}, {"from": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "hasClass", "to": "string"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "hasLabel", "to": "Description Value"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "hasValue", "to": ""}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "043a94d4-5118-42f0-8c0b-da232a0fdb73.ec939df4-aa89-4209-a833-b99483d38be9"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "468f4fb3-7196-4e47-969f-487c56204621.e1d547c0-d803-4b84-bfd9-184049006e63"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "c235c334-8c4f-46ec-ad58-b057e415c3ee.0e520e46-a29e-40bc-9fbe-f1d69664e763"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "5551c85c-3d6a-4893-b5dd-2a5c466e1821.e6e0b993-cff4-473a-b65b-7be235f0a949"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "ed08781a-e77f-4f27-bdb0-e2adab6e05d4.c6b55a70-a427-4c05-9f15-2df74f3cc43b"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "bfe290ed-ac9c-419a-a3ff-162817e13762.60099d01-b804-4b53-8059-51a8bf8b4020"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8"}, {"from": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "hasClass", "to": "string"}, {"from": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "hasLabel", "to": "Format Value"}, {"from": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "hasValue", "to": ""}, {"from": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980"}, {"from": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "hasClass", "to": "string"}, {"from": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "hasLabel", "to": "Description Value"}, {"from": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "hasValue", "to": ""}, {"from": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "hasClass", "to": "string"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "hasLabel", "to": "Fixity Value"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "hasValue", "to": ""}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "b19eebde-3585-4f75-a39a-5b7ab2c49701.477f794b-fe82-4cb4-81ce-1bc38eba645c"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "4c500284-00f1-4373-a6d2-32b1b8cc1f6b.32144e5a-31b4-44e8-acd4-767c618fdbb0"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "3920179f-bce4-4e89-9cf0-50c8de1890a2.87406363-0589-4357-a4b4-cd44bd1fba3f"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5"}, {"from": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "hasClass", "to": "string"}, {"from": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "hasLabel", "to": "Format Value"}, {"from": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "hasValue", "to": ""}, {"from": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e"}, {"from": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "hasClass", "to": "string"}, {"from": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "hasLabel", "to": "Description Value"}, {"from": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "hasValue", "to": ""}, {"from": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasLiteralField", "to": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "hasClass", "to": "string"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "hasLabel", "to": "Reference Value"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "hasValue", "to": ""}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasContent", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260", "label": "hasData", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.0922ae8d-2e33-47a7-a5cd-7382bf4fda7b"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260", "label": "hasData", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.fbfe17a2-452b-4aab-8638-1dcba8f14620"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260", "label": "hasStructure", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01", "label": "hasData", "to": "4cdbd0a4-5cf8-4cbf-8fc8-4e643f7b6a01.d092c3bb-2ceb-467b-99e5-909210febe22"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.7d316c14-b10a-4a51-9363-5c9664f0b260", "label": "hasSemantics", "to": "7d316c14-b10a-4a51-9363-5c9664f0b260.517a09d1-0976-4390-9ae2-47c495eb3dfd"}, {"from": "7d316c14-b10a-4a51-9363-5c9664f0b260.517a09d1-0976-4390-9ae2-47c495eb3dfd", "label": "hasData", "to": "517a09d1-0976-4390-9ae2-47c495eb3dfd.6140a526-b98a-44a5-a5d9-17aa99733561"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasReference", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.6bf6b058-43d9-49b8-bfc7-efcb603661ed"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.6bf6b058-43d9-49b8-bfc7-efcb603661ed", "label": "hasData", "to": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.f30d0908-4230-468b-a3e9-d3d51bc96209"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.6bf6b058-43d9-49b8-bfc7-efcb603661ed", "label": "hasStructure", "to": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.03187968-ddc0-40fd-8233-bcc7b43acb00"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.03187968-ddc0-40fd-8233-bcc7b43acb00", "label": "hasData", "to": "03187968-ddc0-40fd-8233-bcc7b43acb00.24e43674-c2f2-452a-b6e1-3ac4150321b5"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.6bf6b058-43d9-49b8-bfc7-efcb603661ed", "label": "hasSemantics", "to": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.fbb53ede-49f1-47cb-b931-bed849eb6562"}, {"from": "6bf6b058-43d9-49b8-bfc7-efcb603661ed.fbb53ede-49f1-47cb-b931-bed849eb6562", "label": "hasData", "to": "fbb53ede-49f1-47cb-b931-bed849eb6562.cea2d993-7dda-4028-a3e6-91ea8313271e"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "packagedAs", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.b93dcd8f-d6da-489a-8cfe-329631832ccf"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.b93dcd8f-d6da-489a-8cfe-329631832ccf", "label": "hasData", "to": "b93dcd8f-d6da-489a-8cfe-329631832ccf.80e53510-de5b-476a-97dc-d8e9f75d36a6"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.b93dcd8f-d6da-489a-8cfe-329631832ccf", "label": "hasStructure", "to": "b93dcd8f-d6da-489a-8cfe-329631832ccf.1e156d2f-a0da-4195-954d-ce2ab15996ad"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.1e156d2f-a0da-4195-954d-ce2ab15996ad", "label": "hasData", "to": "1e156d2f-a0da-4195-954d-ce2ab15996ad.024bb38e-afde-4ea0-a466-4b53ca58cbb4"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.b93dcd8f-d6da-489a-8cfe-329631832ccf", "label": "hasSemantics", "to": "b93dcd8f-d6da-489a-8cfe-329631832ccf.30e4eb1a-1d77-4329-a4e4-0fe5c7f14105"}, {"from": "b93dcd8f-d6da-489a-8cfe-329631832ccf.30e4eb1a-1d77-4329-a4e4-0fe5c7f14105", "label": "hasData", "to": "30e4eb1a-1d77-4329-a4e4-0fe5c7f14105.79493162-ab97-417c-9f9a-ef2aad027bf5"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "describedBy", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.f34bc184-08e5-43d3-a159-8c7c4528c412"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.f34bc184-08e5-43d3-a159-8c7c4528c412", "label": "hasData", "to": "f34bc184-08e5-43d3-a159-8c7c4528c412.8b4fd00b-dfc5-4d74-8a50-d49685bf0338"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.f34bc184-08e5-43d3-a159-8c7c4528c412", "label": "hasStructure", "to": "f34bc184-08e5-43d3-a159-8c7c4528c412.d4727dc4-d81f-49e4-ba5d-58d516758076"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.d4727dc4-d81f-49e4-ba5d-58d516758076", "label": "hasData", "to": "d4727dc4-d81f-49e4-ba5d-58d516758076.6ea2ae7a-0a28-4334-883c-3ec9aa86e46b"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.f34bc184-08e5-43d3-a159-8c7c4528c412", "label": "hasSemantics", "to": "f34bc184-08e5-43d3-a159-8c7c4528c412.4304396b-5dda-4d34-a567-8ca2d3fefc47"}, {"from": "f34bc184-08e5-43d3-a159-8c7c4528c412.4304396b-5dda-4d34-a567-8ca2d3fefc47", "label": "hasData", "to": "4304396b-5dda-4d34-a567-8ca2d3fefc47.7bad64da-8110-41e9-a5c6-223ba7fac053"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasParentPattern", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasAccessRights", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.5e5e7b3f-e868-4b14-8a94-dde50c7701ec"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.5e5e7b3f-e868-4b14-8a94-dde50c7701ec", "label": "hasData", "to": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "hasClass", "to": "string"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "hasLabel", "to": "Access Rights Value"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "hasValue", "to": ""}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.5e5e7b3f-e868-4b14-8a94-dde50c7701ec", "label": "hasStructure", "to": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.80f10448-4eff-4a48-bc8e-4b5738605a38"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.80f10448-4eff-4a48-bc8e-4b5738605a38", "label": "hasData", "to": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9"}, {"from": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "hasClass", "to": "string"}, {"from": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "hasLabel", "to": "Format Value"}, {"from": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "hasValue", "to": ""}, {"from": "80f10448-4eff-4a48-bc8e-4b5738605a38.13a9600f-1822-4cc0-b1d7-3fd5d8bc24b9", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.5e5e7b3f-e868-4b14-8a94-dde50c7701ec", "label": "hasSemantics", "to": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.293e7ab0-e194-42a3-a7e7-14784251c465"}, {"from": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.293e7ab0-e194-42a3-a7e7-14784251c465", "label": "hasData", "to": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67"}, {"from": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "hasClass", "to": "string"}, {"from": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "hasLabel", "to": "Meaning Value"}, {"from": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "hasValue", "to": ""}, {"from": "293e7ab0-e194-42a3-a7e7-14784251c465.138c9e4c-e569-40c2-8e7d-78bdd4725d67", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasProvenance", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4bd6fc29-02f5-41ee-bbf4-140fde173c4c"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4bd6fc29-02f5-41ee-bbf4-140fde173c4c", "label": "hasData", "to": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "hasClass", "to": "string"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "hasLabel", "to": "Provenance Value"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "hasValue", "to": ""}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4bd6fc29-02f5-41ee-bbf4-140fde173c4c", "label": "hasStructure", "to": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.4c258ab2-8bab-42ec-aa53-caa807d6f6dc"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.4c258ab2-8bab-42ec-aa53-caa807d6f6dc", "label": "hasData", "to": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad"}, {"from": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "hasClass", "to": "string"}, {"from": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "hasLabel", "to": "Format Value"}, {"from": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "hasValue", "to": ""}, {"from": "4c258ab2-8bab-42ec-aa53-caa807d6f6dc.6016f95e-f027-4976-8aab-739f91e7dcad", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4bd6fc29-02f5-41ee-bbf4-140fde173c4c", "label": "hasSemantics", "to": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.8886463c-291c-43cf-bfe3-77c71ddc9846"}, {"from": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.8886463c-291c-43cf-bfe3-77c71ddc9846", "label": "hasData", "to": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a"}, {"from": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "hasClass", "to": "string"}, {"from": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "hasLabel", "to": "Description Value"}, {"from": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "hasValue", "to": ""}, {"from": "8886463c-291c-43cf-bfe3-77c71ddc9846.fe258ea4-5f1d-4949-b0f5-ca03d7f5386a", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasContext", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2f089409-1f54-40db-878f-c3df702c0461"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2f089409-1f54-40db-878f-c3df702c0461", "label": "hasData", "to": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "hasClass", "to": "string"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "hasLabel", "to": "Context Value"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "hasValue", "to": ""}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2f089409-1f54-40db-878f-c3df702c0461", "label": "hasStructure", "to": "2f089409-1f54-40db-878f-c3df702c0461.95db38cd-0cf4-4598-8d14-8d92ecc55248"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.95db38cd-0cf4-4598-8d14-8d92ecc55248", "label": "hasData", "to": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe"}, {"from": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "hasClass", "to": "string"}, {"from": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "hasLabel", "to": "Format Value"}, {"from": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "hasValue", "to": ""}, {"from": "95db38cd-0cf4-4598-8d14-8d92ecc55248.3d960e11-288f-4cc5-a7dc-26c3cd63c5fe", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2f089409-1f54-40db-878f-c3df702c0461", "label": "hasSemantics", "to": "2f089409-1f54-40db-878f-c3df702c0461.6e249723-3c3c-4edb-8c2b-a6601a5d9dc2"}, {"from": "2f089409-1f54-40db-878f-c3df702c0461.6e249723-3c3c-4edb-8c2b-a6601a5d9dc2", "label": "hasData", "to": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c"}, {"from": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "hasClass", "to": "string"}, {"from": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "hasLabel", "to": "Description Value"}, {"from": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "hasValue", "to": ""}, {"from": "6e249723-3c3c-4edb-8c2b-a6601a5d9dc2.17b5a776-a2c5-477f-88d3-95666310e53c", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "hasClass", "to": "string"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "hasLabel", "to": "Value"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "hasValue", "to": ""}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "hasClass", "to": "string"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "hasLabel", "to": "Description Value"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "hasValue", "to": ""}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "5e5e7b3f-e868-4b14-8a94-dde50c7701ec.b03fa259-5008-4096-8c08-bac956a3f3ee"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "2f089409-1f54-40db-878f-c3df702c0461.bd2e7d6b-2968-40d8-b054-883120d1c34a"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "hasClass", "to": "string"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "hasLabel", "to": "Fixity Value"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "hasValue", "to": ""}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "4bd6fc29-02f5-41ee-bbf4-140fde173c4c.621c10ce-92f6-4e93-88c9-92b97e61c785"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasLiteralField", "to": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "hasClass", "to": "string"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "hasLabel", "to": "Reference Value"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "hasValue", "to": ""}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasContent", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a", "label": "hasData", "to": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "hasClass", "to": "string"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "hasLabel", "to": "{{placeholder1}}"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "hasValue", "to": ""}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.293aba6b-3954-4862-8f8a-60aca3b3c7b0", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a", "label": "hasData", "to": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "hasClass", "to": "string"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "hasLabel", "to": "{{placeholder2}}"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "hasValue", "to": ""}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.461cf3bc-3011-410c-a882-6a1fafc6056e", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a", "label": "hasStructure", "to": "68fc659a-27e8-4e71-9733-65bfe024c95a.459eb1ae-90e3-45fa-96e7-136913cc69a1"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.459eb1ae-90e3-45fa-96e7-136913cc69a1", "label": "hasData", "to": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754"}, {"from": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "hasClass", "to": "string"}, {"from": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "hasLabel", "to": "Content Format Value"}, {"from": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "hasValue", "to": ""}, {"from": "459eb1ae-90e3-45fa-96e7-136913cc69a1.33181c0a-61c9-4bb6-a920-c97e09b8b754", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.68fc659a-27e8-4e71-9733-65bfe024c95a", "label": "hasSemantics", "to": "68fc659a-27e8-4e71-9733-65bfe024c95a.5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6"}, {"from": "68fc659a-27e8-4e71-9733-65bfe024c95a.5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6", "label": "hasData", "to": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac"}, {"from": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "hasClass", "to": "string"}, {"from": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "hasLabel", "to": "Content Description Value"}, {"from": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "hasValue", "to": ""}, {"from": "5f4cf7b2-366a-4ea0-9f22-9eee5a6559f6.f4d82958-400b-46b4-b8ae-f876c513acac", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasReference", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4e91265f-c1d8-4a88-8b8c-6f4770f7383c"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4e91265f-c1d8-4a88-8b8c-6f4770f7383c", "label": "hasData", "to": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.50ae0e97-4966-4043-910a-4f51ed14ef1c"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4e91265f-c1d8-4a88-8b8c-6f4770f7383c", "label": "hasStructure", "to": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.10a21d4f-1870-4f68-bfde-dc5dadacc783"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.10a21d4f-1870-4f68-bfde-dc5dadacc783", "label": "hasData", "to": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b"}, {"from": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "hasClass", "to": "string"}, {"from": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "hasLabel", "to": "Format Value"}, {"from": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "hasValue", "to": ""}, {"from": "10a21d4f-1870-4f68-bfde-dc5dadacc783.8d626bdf-c1e4-42c5-826f-a88915c0707b", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.4e91265f-c1d8-4a88-8b8c-6f4770f7383c", "label": "hasSemantics", "to": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.fceacf30-8f32-47a9-a1c9-87b8bcd85097"}, {"from": "4e91265f-c1d8-4a88-8b8c-6f4770f7383c.fceacf30-8f32-47a9-a1c9-87b8bcd85097", "label": "hasData", "to": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966"}, {"from": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "hasClass", "to": "string"}, {"from": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "hasLabel", "to": "Description Value"}, {"from": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "hasValue", "to": ""}, {"from": "fceacf30-8f32-47a9-a1c9-87b8bcd85097.0ae91c65-3586-471c-9244-c02a9afb7966", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "packagedAs", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2a932da9-851f-4e33-8958-e51d11f36f63"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2a932da9-851f-4e33-8958-e51d11f36f63", "label": "hasData", "to": "2a932da9-851f-4e33-8958-e51d11f36f63.a3b06c2d-7b7f-417b-bcd1-0838a4ef6b02"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2a932da9-851f-4e33-8958-e51d11f36f63", "label": "hasStructure", "to": "2a932da9-851f-4e33-8958-e51d11f36f63.3454d5ad-f439-4c3a-a9bb-70cb18d369e4"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.3454d5ad-f439-4c3a-a9bb-70cb18d369e4", "label": "hasData", "to": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b"}, {"from": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "hasClass", "to": "string"}, {"from": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "hasLabel", "to": "Format Value"}, {"from": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "hasValue", "to": ""}, {"from": "3454d5ad-f439-4c3a-a9bb-70cb18d369e4.4c77a3d0-8bac-4f17-8318-42deedddba7b", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.2a932da9-851f-4e33-8958-e51d11f36f63", "label": "hasSemantics", "to": "2a932da9-851f-4e33-8958-e51d11f36f63.beb4d4f0-6469-4871-b72c-489eb0d98770"}, {"from": "2a932da9-851f-4e33-8958-e51d11f36f63.beb4d4f0-6469-4871-b72c-489eb0d98770", "label": "hasData", "to": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403"}, {"from": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "hasClass", "to": "string"}, {"from": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "hasLabel", "to": "Description Value"}, {"from": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "hasValue", "to": ""}, {"from": "beb4d4f0-6469-4871-b72c-489eb0d98770.b50d3e3f-9ee1-4282-8e46-f795501e0403", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "describedBy", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.7703dc65-b383-4a8a-ac7c-6776e3d9509e"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.7703dc65-b383-4a8a-ac7c-6776e3d9509e", "label": "hasData", "to": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.b198ba8c-361b-4c1b-9b03-31be566fe972"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.7703dc65-b383-4a8a-ac7c-6776e3d9509e", "label": "hasStructure", "to": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.13868dd3-f0c4-4c7b-8b76-bc96777b94aa"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.13868dd3-f0c4-4c7b-8b76-bc96777b94aa", "label": "hasData", "to": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562"}, {"from": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "hasClass", "to": "string"}, {"from": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "hasLabel", "to": "Format Value"}, {"from": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "hasValue", "to": ""}, {"from": "13868dd3-f0c4-4c7b-8b76-bc96777b94aa.b78837f0-9a87-47c5-87c1-d182fb230562", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.7703dc65-b383-4a8a-ac7c-6776e3d9509e", "label": "hasSemantics", "to": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.4c54b533-c36d-4ffa-b346-7d8f701e4185"}, {"from": "7703dc65-b383-4a8a-ac7c-6776e3d9509e.4c54b533-c36d-4ffa-b346-7d8f701e4185", "label": "hasData", "to": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec"}, {"from": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "hasClass", "to": "string"}, {"from": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "hasLabel", "to": "Meaning Value"}, {"from": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "hasValue", "to": ""}, {"from": "4c54b533-c36d-4ffa-b346-7d8f701e4185.d4d7495d-1b8c-4e7b-a8f8-0b81d99cebec", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3", "label": "hasFixity", "to": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf", "label": "hasData", "to": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.b3cbe94d-5b7c-471b-a072-54dd55b325a3"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf", "label": "hasStructure", "to": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.aaf1384f-2375-4140-bbe1-70b5fbddeed4"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.aaf1384f-2375-4140-bbe1-70b5fbddeed4", "label": "hasData", "to": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d"}, {"from": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "hasClass", "to": "string"}, {"from": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "hasLabel", "to": "Format Value"}, {"from": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "hasValue", "to": ""}, {"from": "aaf1384f-2375-4140-bbe1-70b5fbddeed4.d793e588-c063-4d9f-aa2c-2e6b1ab06b3d", "label": "isRequired", "to": "True"}, {"from": "ee4e8c3e-74a5-4e77-b590-c3f8aa9b1ae3.a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf", "label": "hasSemantics", "to": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.28a825cf-47c3-480a-9dff-dc667c61d24c"}, {"from": "a45bce56-cf74-4fb3-8a98-2d0a8b2e23bf.28a825cf-47c3-480a-9dff-dc667c61d24c", "label": "hasData", "to": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce"}, {"from": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "hasClass", "to": "string"}, {"from": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "hasLabel", "to": "Description Value"}, {"from": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "hasNamespace", "to": "http://www.w3.org/2001/XMLSchema#"}, {"from": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "hasValue", "to": ""}, {"from": "28a825cf-47c3-480a-9dff-dc667c61d24c.6acc62f8-072b-43ad-8e50-cc2c650cbdce", "label": "isRequired", "to": "True"}, {"from": "d365b224-2d3a-4128-aa54-62f3e987d146.19a53bac-f1a9-428b-9551-dbbd8f763fe6", "label": "hasFixity", "to": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.d4054d3c-4047-4d5e-a571-cd030f580c72"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.d4054d3c-4047-4d5e-a571-cd030f580c72", "label": "hasData", "to": "d4054d3c-4047-4d5e-a571-cd030f580c72.97536228-df16-4528-aedc-6f35e3f73282"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.d4054d3c-4047-4d5e-a571-cd030f580c72", "label": "hasStructure", "to": "d4054d3c-4047-4d5e-a571-cd030f580c72.0e3b393e-b271-4b74-a51c-1f348ac8fccc"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.0e3b393e-b271-4b74-a51c-1f348ac8fccc", "label": "hasData", "to": "0e3b393e-b271-4b74-a51c-1f348ac8fccc.aafdcf7a-8ffb-4740-95ac-c546267e2be8"}, {"from": "19a53bac-f1a9-428b-9551-dbbd8f763fe6.d4054d3c-4047-4d5e-a571-cd030f580c72", "label": "hasSemantics", "to": "d4054d3c-4047-4d5e-a571-cd030f580c72.b2180bdd-53d6-482c-a275-fc3ff19ddb99"}, {"from": "d4054d3c-4047-4d5e-a571-cd030f580c72.b2180bdd-53d6-482c-a275-fc3ff19ddb99", "label": "hasData", "to": "b2180bdd-53d6-482c-a275-fc3ff19ddb99.ca9155cd-ce79-42ab-9b80-446fc4105980"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"configure": {"enabled": true, "showButton": true, "filter": ["physics", "layout"]}, "layout": {"hierarchical": {"enabled": true, "direction": "UD", "sortMethod": "directed"}}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
